@@ -1,34 +1,50 @@
 
 import cv2
+import struct
+
 vidcap = cv2.VideoCapture('badapple.mp4')
 success,image = vidcap.read()
 count = 0
 
-writetofile = "videostuff.txt"
+writetofile = "1x1.txt"
 with open(writetofile, 'w') as f:
     pass 
-file = open(writetofile,'a');
+file = open(writetofile,'ab');
 
 height = len(image)
 width = len(image[0])
 
-file.write(str(height) + ' ' + str(width))
+#file.write(str(height) + ' ' + str(width))
+#file.write('\n')
+chunksize = 1
+bytebuffer = ''
 while success: 
-  framedata = ''
-  for y in range(height//4):
-      for x in range(width//4):
-          rgb0 = int(image[y*4][x*4][0]) + int(image[y*4][x*4][1]) + int(image[y*4][x*4][2])
-          rgb1 = int(image[y*4][x*4+1][0]) + int(image[y*4][x*4+1][1]) + int(image[y*4][x*4+1][2])
-          rgb2 = int(image[y*4+1][x*4][0]) + int(image[y*4+1][x*4][1]) + int(image[y*4+1][x*4][2])
-          rgb3 = int(image[y*4+1][x*4+1][0]) + int(image[y*4+1][x*4+1][1]) + int(image[y*4+1][x*4+1][2])
-          if ((rgb0+rgb1+rgb2+rgb3)/12.0 > 127.0):
-              framedata+='1'
-          else:
-              framedata+='0'
+  for y in range(height // chunksize**1):
+    for x in range(width // chunksize**1):
+        sume = 0;
+        for xe in range(chunksize):
+            for ye in range(chunksize):
+                sume += int(image[y*chunksize**1+ye][x*chunksize**1+xe][0])
+
+        if (sume/chunksize**2 > 128.0):
+            bytebuffer+='1'
+              
+        else:
+            bytebuffer+='0'
+          
+        if len(bytebuffer) >= 8:
+
+            #print("appended " + str(int(bytebuffer,2)))
+            #bytestowrite.append(int(bytebuffer,2))
+            file.write(int(bytebuffer,2).to_bytes(1,'big'))
+            bytebuffer = ''
+
   print('FRAME ' + str(count) + ' IS DONE')
-  file.write('\n')
-  file.write(framedata);
- 
   success,image = vidcap.read()
   count += 1
+while len(bytebuffer)%8 != 0:
+    bytebuffer+='0'
+if len(bytebuffer) == 8:
+    file.write(int(bytebuffer,2).to_bytes(1,byteorder='big'))
+
 print("FINISHED")
